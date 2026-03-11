@@ -55,6 +55,7 @@ class MaruConnectorConfig:
     use_async_rpc: bool = True  # Use async DEALER-ROUTER RPC
     max_inflight: int = 64  # Max concurrent in-flight async requests
     eager_map: Optional[bool] = None  # None = defer to MaruConfig/env
+    pool_id: Optional[int] = None  # None = any pool (ANY_POOL_ID)
 
     @staticmethod
     def from_url(url: str) -> "MaruConnectorConfig":
@@ -93,6 +94,7 @@ class MaruConnectorConfig:
             use_async_rpc=extra.get("maru_use_async_rpc", True),
             max_inflight=int(extra.get("maru_max_inflight", 64)),
             eager_map=extra.get("maru_eager_map"),
+            pool_id=extra.get("maru_pool_id"),
         )
 
 
@@ -179,6 +181,8 @@ class MaruConnector(RemoteConnector):
             )
             if self.maru_config.eager_map is not None:
                 maru_cfg_kwargs["eager_map"] = self.maru_config.eager_map
+            if self.maru_config.pool_id is not None:
+                maru_cfg_kwargs["pool_id"] = self.maru_config.pool_id
             maru_cfg = MaruConfig(**maru_cfg_kwargs)
             handle = MaruHandler(maru_cfg)
             self._handle = handle
