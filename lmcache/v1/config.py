@@ -243,7 +243,7 @@ _CONFIG_DEFINITIONS: dict[str, dict[str, Any]] = {
     },
     "maru_as_primary_allocator": {
         "type": bool,
-        "default": True,
+        "default": False,
         "env_converter": lambda v: v.lower() in ("true", "1", "yes"),
     },
     # Other configurations
