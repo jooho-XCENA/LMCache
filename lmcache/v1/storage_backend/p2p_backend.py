@@ -291,7 +291,44 @@ class P2PBackend(StorageBackendInterface):
         hashes = [key.chunk_hash for key in keys]
 
         # Tier 1 lookup: local lookup cache
-        # TODO(Jiayi): Please implement the local lookup cache.
+        if hashes[0] in self.local_lookup_cache:
+            cached = self.local_lookup_cache[hashes[0]]
+            cached_peer_init_url, cached_location, _ = cached
+            # Count consecutive hashes on the same peer
+            num_hit_chunks = 1
+            for h in hashes[1:]:
+                if h not in self.local_lookup_cache:
+                    break
+                if self.local_lookup_cache[h][0] != cached_peer_init_url:
+                    break
+                num_hit_chunks += 1
+
+            try:
+                await self._ensure_peer_connection(cached_peer_init_url)
+                self.lookup_id_to_peer_mapping[lookup_id] = (
+                    cached_peer_init_url,
+                    cached_location,
+                )
+                logger.info(
+                    "Tier 1 local cache hit: %d chunks on peer %s",
+                    num_hit_chunks,
+                    cached_peer_init_url,
+                )
+                return num_hit_chunks
+            except Exception as e:
+                logger.warning(
+                    "Tier 1 cache hit but peer connection failed for %s, "
+                    "invalidating cache entries and falling through to "
+                    "Tier 2: %s",
+                    cached_peer_init_url,
+                    e,
+                )
+                # Reactive invalidation: remove all entries for this peer
+                self.local_lookup_cache = {
+                    k: v
+                    for k, v in self.local_lookup_cache.items()
+                    if v[0] != cached_peer_init_url
+                }
 
         # Tier 2 lookup in controller
         msg = BatchedP2PLookupMsg(
@@ -314,7 +351,7 @@ class P2PBackend(StorageBackendInterface):
 
         # NOTE(Jiayi): For now we only support one peer hit.
         layout_info = ret_msg.layout_info[0]
-        _, location, num_hit_chunks, target_peer_init_url = layout_info
+        instance_id, location, num_hit_chunks, target_peer_init_url = layout_info
 
         logger.info(f"Got layout info from controller: {layout_info}")
 
@@ -334,8 +371,14 @@ class P2PBackend(StorageBackendInterface):
                 )
                 return 0
 
-        # TODO(Jiayi): We could potentially update the local cache here.
-        # Or we can update after tier 3 lookup.
+        # Update local lookup cache with Tier 2 results
+        if num_hit_chunks > 0:
+            for h in hashes[:num_hit_chunks]:
+                self.local_lookup_cache[h] = (
+                    target_peer_init_url,
+                    location,
+                    instance_id,
+                )
 
         # NOTE(Jiayi): Tier 3 lookup is batched together with get
         # in function `batched_get_non_blocking`.
