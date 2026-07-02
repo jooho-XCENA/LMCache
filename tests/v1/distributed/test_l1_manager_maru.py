@@ -652,6 +652,36 @@ class TestMaruClose:
 
 
 # =========================================================================
+# Conflicting backend selections are rejected at config time
+# =========================================================================
+
+
+class TestConflictingBackendConfigs:
+    def test_maru_plus_gds_rejected(self, maru_cfg):
+        # First Party
+        from lmcache.v1.distributed.config import GdsL1Config
+
+        with pytest.raises(ValueError, match="conflicting L1 backends"):
+            L1ManagerConfig(
+                memory_config=L1MemoryManagerConfig(
+                    size_in_bytes=0, use_lazy=False, maru_config=maru_cfg
+                ),
+                gds_l1_config=GdsL1Config(
+                    file_location="/tmp/gds", size_in_bytes=1 << 20
+                ),
+            )
+
+    def test_maru_plus_devdax_rejected(self, maru_cfg):
+        with pytest.raises(ValueError, match="conflicting L1 backends"):
+            L1MemoryManagerConfig(
+                size_in_bytes=0,
+                use_lazy=False,
+                maru_config=maru_cfg,
+                devdax_path="/dev/dax0.0",
+            )
+
+
+# =========================================================================
 # Quick coverage for an unused-import suppressor — keep linters happy.
 # =========================================================================
 

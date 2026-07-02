@@ -248,3 +248,20 @@ class TestCloseAndReport:
             assert "l2_eviction_controller" not in status
         finally:
             mgr.close()
+
+
+# =========================================================================
+# (5) l1_memory_desc is explicitly unsupported in maru mode
+# =========================================================================
+
+
+class TestL1MemoryDescMaru:
+    def test_raises_descriptive_not_implemented(self, maru_storage_config):
+        # P2P orchestration reads this property at startup; in maru mode it
+        # must fail with a clear message instead of a bare AttributeError.
+        mgr = StorageManager(maru_storage_config)
+        try:
+            with pytest.raises(NotImplementedError, match="maru"):
+                _ = mgr.l1_memory_desc
+        finally:
+            mgr.close()

@@ -48,10 +48,13 @@ def object_key_to_string(key: ObjectKey) -> str:
     """Stable string representation of ``ObjectKey`` for ``MaruHandler``
     RPCs.
 
-    The format mirrors the encoding used by other L2 adapters
-    (``model@kv_rank_hex@chunk_hash_hex[@salt]``) so KV index entries
-    are inter-operable with adapters that might query the same
-    MaruServer instance through the L2 path.
+    The 3-segment format (``model@kv_rank_hex@chunk_hash_hex[@salt]``)
+    matches the maru L2 adapter's encoding so KV index entries stay
+    inter-operable with a maru L2 adapter querying the same MaruServer.
+    Note that it intentionally differs from the standard L2 adapters,
+    which insert an ``object_group_id`` segment — the maru L1 tier
+    serves single-object-group models only (enforced by
+    ``StorageManager.register_kv_layout``), so the segment is omitted.
 
     Args:
         key: The object key to encode.

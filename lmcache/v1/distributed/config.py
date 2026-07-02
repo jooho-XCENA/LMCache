@@ -146,6 +146,12 @@ class L1MemoryManagerConfig:
         if self.devdax_path is not None:
             self.devdax_path = self.devdax_path.strip()
 
+        if self.maru_config is not None and self.devdax_path:
+            raise ValueError(
+                "maru_config and devdax_path select conflicting L1 backends. "
+                "Unset --l1-devdax-path when --maru-server-url is used."
+            )
+
         if self.devdax_size_in_bytes < 0:
             raise ValueError("devdax_size_in_bytes must be >= 0")
         if self.devdax_size_in_bytes and not self.devdax_path:
@@ -215,6 +221,16 @@ class L1ManagerConfig:
 
     read_ttl_seconds: int = field(default=300)
     """ Time to live for each object's read lock. Default is 300s (5 minutes). """
+
+    def __post_init__(self) -> None:
+        if (
+            self.gds_l1_config is not None
+            and self.memory_config.maru_config is not None
+        ):
+            raise ValueError(
+                "gds_l1_config and maru_config select conflicting L1 backends. "
+                "Unset --gds-l1-path when --maru-server-url is used."
+            )
 
 
 @dataclass

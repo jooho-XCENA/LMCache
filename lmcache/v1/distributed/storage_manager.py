@@ -805,7 +805,20 @@ class StorageManager:
 
     @property
     def l1_memory_desc(self) -> L1MemoryDesc:
-        """Descriptor of the L1 memory buffer backing this storage manager."""
+        """Descriptor of the L1 memory buffer backing this storage manager.
+
+        Raises:
+            NotImplementedError: In maru mode — the L1 tier lives in CXL
+                pages owned by MaruServer, so there is no single local
+                buffer to describe. Consumers that need this descriptor
+                (e.g. P2P orchestration) are unsupported with the maru
+                backend.
+        """
+        if self._is_maru:
+            raise NotImplementedError(
+                "l1_memory_desc is not available with the maru L1 backend "
+                "(no single contiguous local buffer; P2P is unsupported)."
+            )
         return self._l1_memory_desc
 
     def get_l2_usages(
