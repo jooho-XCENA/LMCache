@@ -4,8 +4,8 @@
 Coverage:
 
 1. ``object_key_to_string`` — stable string form for MaruHandler RPCs.
-2. ``L1Manager.__init__`` — auto-detects ``MaruMemoryAllocator`` and
-   constructs a :class:`MaruL1Dispatcher`.
+2. ``L1Manager.__init__`` — selects the ``MaruL1MemoryManager`` tier
+   and constructs a :class:`MaruL1Dispatcher`.
 3. ``_is_maru_backend`` — dispatch flag.
 4. STORE path: ``reserve_write`` (allocate) → ``finish_write``
    (``MaruHandler.batch_store``).

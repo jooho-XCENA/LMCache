@@ -27,10 +27,9 @@ from lmcache.v1.distributed.memory_manager import (
 from lmcache.v1.distributed.memory_manager.devdax_l1_memory_manager import (
     DevDaxL1MemoryManager,
 )
-
-# ``_is_maru_allocator`` is not re-exported by the package ``__init__`` (it is a
-# private helper), so import it from the submodule directly.
-from lmcache.v1.distributed.memory_manager.l1_memory_manager import _is_maru_allocator
+from lmcache.v1.distributed.memory_manager.maru_l1_memory_manager import (
+    MaruL1MemoryManager,
+)
 from lmcache.v1.memory_management import MemoryFormat, MemoryObj
 from lmcache.v1.mp_observability.event import Event, EventType
 from lmcache.v1.mp_observability.event_bus import get_event_bus
@@ -197,12 +196,18 @@ class L1Manager:
 
         self._objects: dict[ObjectKey, L1ObjectState] = {}
 
-        # GDS, Device-DAX, and CPU L1 are mutually exclusive tiers. Each tier
-        # owns its backing allocator instead of branching inside the CPU path.
+        # GDS, Maru, Device-DAX, and CPU L1 are mutually exclusive tiers. Each
+        # tier owns its backing allocator instead of branching inside the CPU
+        # path.
         self._memory_manager: L1ManagerProtocol
         if config.gds_l1_config is not None:
             self._memory_manager = GDSL1MemoryManager(config.gds_l1_config)
             logger.info("L1Manager: GDS L1 tier enabled; CPU pinned-DRAM L1 disabled")
+        elif config.memory_config.maru_config is not None:
+            self._memory_manager = MaruL1MemoryManager(config.memory_config)
+            logger.info(
+                "L1Manager: Maru CXL-backed L1 tier enabled; CPU-only L1 disabled"
+            )
         elif config.memory_config.devdax_path:
             self._memory_manager = DevDaxL1MemoryManager(config.memory_config)
             logger.info("L1Manager: Device-DAX L1 tier enabled; CPU-only L1 disabled")
@@ -216,23 +221,13 @@ class L1Manager:
 
         self._event_bus = get_event_bus()
 
-        # When the L1 allocator is ``MaruMemoryAllocator``, L1Manager
-        # operates in pass-through mode: the state machine / TTLLock /
-        # eviction policy are bypassed and MaruServer RPCs are issued
-        # directly via :class:`MaruL1Dispatcher`, which encapsulates
-        # the maru-specific handler reference and read-side channel.
+        # When the L1 tier is Maru, L1Manager operates in pass-through mode:
+        # the state machine / TTLLock / eviction policy are bypassed and
+        # MaruServer RPCs are issued directly via :class:`MaruL1Dispatcher`,
+        # which encapsulates the maru-specific handler reference and
+        # read-side channel.
         self._maru_dispatcher: Optional[MaruL1Dispatcher] = None
-        if isinstance(self._memory_manager, L1MemoryManager) and _is_maru_allocator(
-            self._memory_manager.allocator
-        ):
-            # Lazy-import the concrete allocator class so the maru
-            # runtime stays optional for non-maru deployments.
-            # First Party
-            from lmcache.v1.distributed.maru_memory_allocator import (
-                MaruMemoryAllocator,
-            )
-
-            assert isinstance(self._memory_manager.allocator, MaruMemoryAllocator)
+        if isinstance(self._memory_manager, MaruL1MemoryManager):
             self._maru_dispatcher = MaruL1Dispatcher(
                 allocator=self._memory_manager.allocator,
                 memory_manager=self._memory_manager,
@@ -293,11 +288,10 @@ class L1Manager:
             fmt: Memory format.
             chunk_size_in_tokens: LMCache chunk size in tokens.
         """
-        # Only the CPU-tier ``L1MemoryManager`` implements
-        # ``register_kv_layout`` (it forwards to the maru allocator and
-        # is a no-op for default DRAM). The GDS tier has no such method,
-        # so skip it there.
-        if isinstance(self._memory_manager, L1MemoryManager):
+        # Only the maru tier consumes the KV layout (its CXL pool is typed
+        # at first registration). The DRAM / Device-DAX / GDS tiers are
+        # layout-agnostic, so the call is skipped for them.
+        if isinstance(self._memory_manager, MaruL1MemoryManager):
             self._memory_manager.register_kv_layout(
                 shapes, dtypes, fmt, chunk_size_in_tokens
             )

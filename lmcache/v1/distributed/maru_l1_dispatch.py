@@ -11,7 +11,7 @@ The dispatcher owns:
 
 - ``MaruMemoryAllocator`` reference — for the ``handler`` property and
   the ``get_by_location`` / ``create_store_handle`` extension methods.
-- ``L1MemoryManager`` reference — used by :meth:`reserve_write` to
+- ``MaruL1MemoryManager`` reference — used by :meth:`reserve_write` to
   drive allocation and by :meth:`report_status` to read usage stats.
 - ``_pending_read_memobjs`` side channel — populated in
   :meth:`reserve_read` and drained by :meth:`unsafe_read` /
@@ -39,7 +39,7 @@ from lmcache.v1.memory_management import MemoryObj
 if TYPE_CHECKING:
     # First Party
     from lmcache.v1.distributed.maru_memory_allocator import MaruMemoryAllocator
-    from lmcache.v1.distributed.memory_manager import L1MemoryManager
+    from lmcache.v1.distributed.memory_manager import MaruL1MemoryManager
 
 logger = init_logger(__name__)
 
@@ -77,7 +77,7 @@ class MaruL1Dispatcher:
     def __init__(
         self,
         allocator: "MaruMemoryAllocator",
-        memory_manager: "L1MemoryManager",
+        memory_manager: "MaruL1MemoryManager",
         write_ttl_seconds: int,
         read_ttl_seconds: int,
     ) -> None:
