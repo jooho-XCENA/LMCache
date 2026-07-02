@@ -236,8 +236,9 @@ def run_http_server(
         if not l1_exposes_single_memory_region(storage_manager_config):
             raise ValueError(
                 "P2P requires a single L1 memory region the transfer channel "
-                "can register; it is incompatible with GDS L1 (--gds-l1-path) "
-                "and Device-DAX L1 (--l1-devdax-path)."
+                "can register; it is incompatible with GDS L1 (--gds-l1-path), "
+                "Device-DAX L1 (--l1-devdax-path), and Maru L1 "
+                "(--maru-server-url)."
             )
     _configs["mp"] = mp_config
     _configs["storage_manager"] = storage_manager_config

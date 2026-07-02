@@ -60,8 +60,9 @@ them. Maru changes *who owns the tier*:
   would fight the server's.
 - **The operation shape differs.** `L1ManagerProtocol.allocate(layout, count)`
   hands out anonymous buffers that the caller binds to keys. Maru operations
-  are key-addressed RPCs (`batch_store`, `batch_pin`, `batch_retrieve`,
-  `get_by_location`, `create_store_handle`) — they do not fit the protocol
+  are key-addressed RPCs (`batch_store`, `batch_pin`, `batch_retrieve`) plus
+  their local companion extension methods on the allocator
+  (`get_by_location`, `create_store_handle`) — they do not fit the protocol
   without turning it into a lifecycle-aware key-value interface, which is
   exactly what `MaruL1Dispatcher` encapsulates instead.
 - **The lock-transition flow differs.** The engine's maru read path stages
@@ -98,7 +99,7 @@ quota endpoints) degrade gracefully rather than crash.
 first `register_kv_layout` call, which flows:
 
 ```
-MPCacheEngine.register_kv_cache
+vLLM worker adapter submits REGISTER_KV_CACHE (MPCacheServer dispatch)
   -> LMCacheDrivenTransferModule.register_kv_cache
   -> StorageManager.register_kv_layout   (rejects num_object_groups > 1)
   -> L1Manager.register_kv_layout        (maru tier only; others skip)
@@ -127,9 +128,12 @@ only (enforced at registration).
 - The DRAM L1 flags (`--l1-size-gb`, `--l1-use-lazy`, `--l1-init-size-gb`)
   are ignored; pass `--l1-size-gb 0`.
 - Conflicting backend selections are rejected at config time with
-  `ValueError`: maru + GDS (`gds_l1_config`) and maru + Device-DAX
-  (`devdax_path`). Maru + P2P fails at startup with a descriptive
-  `NotImplementedError` from `StorageManager.l1_memory_desc`.
+  `ValueError`: maru + GDS (`gds_l1_config`), maru + Device-DAX
+  (`devdax_path`), and maru + P2P (via the
+  `l1_exposes_single_memory_region` pre-flight in the MP HTTP server).
+  As defense in depth, `StorageManager.l1_memory_desc` also raises a
+  descriptive `NotImplementedError` in maru mode for non-HTTP entry
+  points.
 
 ## Failure Handling And Known Limits
 

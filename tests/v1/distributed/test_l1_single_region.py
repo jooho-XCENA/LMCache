@@ -54,3 +54,21 @@ def test_devdax_l1_is_not_single_region():
         )
     )
     assert l1_exposes_single_memory_region(config) is False
+
+
+def test_maru_l1_is_not_single_region():
+    # First Party
+    from lmcache.v1.distributed.maru_memory_allocator import MaruL1Config
+
+    config = _config(
+        L1MemoryManagerConfig(
+            size_in_bytes=0,
+            use_lazy=False,
+            maru_config=MaruL1Config(
+                server_url="maru://localhost:5555",
+                pool_size_bytes=_SIZE,
+                instance_id="test-mp",
+            ),
+        )
+    )
+    assert l1_exposes_single_memory_region(config) is False

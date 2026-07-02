@@ -33,7 +33,7 @@ class MaruL1MemoryManager(L1MemoryManager):
     The allocator starts lazily — no RPC is issued at construction time. The
     CXL pool is typed from the model's KV layout on the first
     :meth:`register_kv_layout` call (forwarded from
-    ``MPCacheEngine.register_kv_cache``).
+    ``LMCacheDrivenTransferModule.register_kv_cache``).
 
     Note that when this tier is active, ``L1Manager`` runs in pass-through
     mode and drives MaruServer directly via

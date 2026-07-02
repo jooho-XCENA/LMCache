@@ -452,7 +452,7 @@ class MaruMemoryAllocator(MemoryAllocatorInterface):
             raise RuntimeError(
                 f"MaruMemoryAllocator.{op} called before init_layout(); "
                 f"call init_layout(shapes, dtypes, fmt, chunk_size_in_tokens) "
-                f"first (typically from MPCacheEngine.register_kv_cache)."
+                f"first (typically via LMCacheDrivenTransferModule.register_kv_cache)."
             )
 
 

@@ -125,9 +125,9 @@ class L1MemoryManagerConfig:
     """ The alignment size in bytes. Default is 4KB. """
 
     maru_config: Optional["MaruL1Config"] = None
-    """ Optional Maru backend config. When set, the L1 allocator is
-    constructed as ``MaruMemoryAllocator`` (CXL-backed) and the DRAM
-    fields above are ignored. """
+    """ Optional Maru backend config. When set, the L1 tier is
+    ``MaruL1MemoryManager`` (CXL-backed via ``MaruMemoryAllocator``)
+    and the DRAM fields above are ignored. """
 
     shm_name: str = field(default_factory=lambda: f"lmcache_l1_pool_{os.getpid()}")
     """ POSIX shared-memory segment name for L1 pool. Empty disables SHM. """
@@ -350,10 +350,12 @@ def l1_exposes_single_memory_region(config: StorageManagerConfig) -> bool:
 
     Returns:
         ``True`` if L1 is a single registerable memory region, ``False`` for
-        GDS L1 or Device-DAX L1.
+        GDS L1, Device-DAX L1, or Maru L1.
     """
     l1_config = config.l1_manager_config
     if l1_config.gds_l1_config is not None:
+        return False
+    if l1_config.memory_config.maru_config is not None:
         return False
     if l1_config.memory_config.devdax_path:
         return False
@@ -440,7 +442,7 @@ def add_storage_manager_args(
         type=str,
         default=None,
         help="MaruServer endpoint (e.g. maru://host:port or tcp://host:port). "
-        "When set, the L1 allocator is CXL-backed and the DRAM L1 settings "
+        "When set, the L1 tier is CXL-backed (Maru) and the DRAM L1 settings "
         "(--l1-size-gb, --l1-use-lazy, --l1-init-size-gb) are ignored.",
     )
     maru_group.add_argument(

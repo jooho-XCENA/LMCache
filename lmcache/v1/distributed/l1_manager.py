@@ -256,7 +256,7 @@ class L1Manager:
             )
 
     def _is_maru_backend(self) -> bool:
-        """True when the L1 allocator is ``MaruMemoryAllocator``.
+        """True when the L1 tier is ``MaruL1MemoryManager``.
 
         In maru mode, L1Manager operates as a pass-through shim:
         - The object dict / TTLLock state machine / eviction policy are
@@ -277,7 +277,7 @@ class L1Manager:
         """Bind the KV layout to the underlying memory manager.
 
         Forwarded from ``StorageManager.register_kv_layout``, which is
-        in turn invoked by ``MPCacheEngine.register_kv_cache`` after a
+        in turn invoked from ``LMCacheDrivenTransferModule.register_kv_cache`` after a
         vLLM worker exposes its KV cache tensors. Only the maru
         backend acts on the call; default DRAM allocators are
         layout-agnostic so it is a no-op for them.

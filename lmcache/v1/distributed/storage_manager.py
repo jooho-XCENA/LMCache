@@ -459,6 +459,10 @@ class StorageManager:
             # Warm path: load all keys, pin none. skip_l2 makes it a no-op.
             prefetch_request_id = -1
             if not skip_l2 and keys and self._l2_adapters:
+                # Non-empty L2 registry implies a non-maru server, where the
+                # controller is always constructed (maru mode skips L2 setup
+                # via the early return in ``__init__``).
+                assert self._prefetch_controller is not None
                 prefetch_request_id = self._prefetch_controller.submit_prefetch_request(
                     keys,
                     layout_desc,

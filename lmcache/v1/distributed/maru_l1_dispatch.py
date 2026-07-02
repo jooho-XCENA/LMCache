@@ -4,8 +4,8 @@
 
 This module isolates the maru-specific behaviour ``L1Manager`` would
 otherwise carry inline. ``L1Manager`` constructs a
-:class:`MaruL1Dispatcher` when it detects a ``MaruMemoryAllocator``
-and forwards each public method to it.
+:class:`MaruL1Dispatcher` when the L1 tier is
+:class:`MaruL1MemoryManager` and forwards each public method to it.
 
 The dispatcher owns:
 
@@ -49,8 +49,9 @@ def object_key_to_string(key: ObjectKey) -> str:
     RPCs.
 
     The 3-segment format (``model@kv_rank_hex@chunk_hash_hex[@salt]``)
-    matches the maru L2 adapter's encoding so KV index entries stay
-    inter-operable with a maru L2 adapter querying the same MaruServer.
+    matches the (follow-up) maru L2 adapter's encoding so KV index
+    entries stay inter-operable with a maru L2 adapter querying the same
+    MaruServer.
     Note that it intentionally differs from the standard L2 adapters,
     which insert an ``object_group_id`` segment — the maru L1 tier
     serves single-object-group models only (enforced by
@@ -102,7 +103,7 @@ class MaruL1Dispatcher:
         Resolves through ``MaruMemoryAllocator.handler``, which raises
         if the allocator's ``init_layout`` has not been called. On the
         engine hot path that ordering is guaranteed by
-        ``MPCacheEngine.register_kv_cache`` running before any
+        ``LMCacheDrivenTransferModule.register_kv_cache`` running before any
         ``store`` / ``lookup`` RPC.
         """
         return self._allocator.handler
